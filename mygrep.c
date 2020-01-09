@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <fcntl.h>
 
 void grepcount(char *pattern, char *filename);  //grep -c
 void linegrep(char *pattern, char *filename);   // grep -n
@@ -39,98 +42,120 @@ int main(int argc, char *argv[])
 
 void grepcount(char *pattern, char *filename)
 {
-    FILE *target;
-    target = fopen(filename, "r");
-    if (target == NULL)
+    int src, count, k = 0, counter = 0;
+    char buffer[255];
+    char exp;
+    src = open(filename, O_RDONLY);
+
+    if (src == -1)
     {
-        printf("\nSpecified file could not be opened.");
-        fclose(target);
+        printf("\nSource File Not Found!");
+        close(src);
         return;
     }
 
-    char *buffer;
-    int count = 0;
-    size_t buf_size;
-
-    while (getline(&buffer, &buf_size, target) != -1) //can also use fgets
+    while ((count = read(src, &exp, sizeof(exp))) != 0)
     {
-        if (strstr(buffer, pattern) != NULL)
-            count++;
+        buffer[k++] = exp;
+        if (exp == '\n' || exp == '\0' || exp == EOF)
+        {
+            buffer[k - 1] = '\0';
+
+            if (strstr(buffer, pattern) != NULL)
+                counter++;
+            memset(&buffer, 0, 255);
+            k = 0;
+        }
     }
-    printf("The number of lines in which '%s' was found in file %s: %d\n", pattern, filename, count);
-    fclose(target);
+    printf("The number of lines in which '%s' was found in file %s: %d\n", pattern, filename, counter);
     return;
 }
 
 void linegrep(char *pattern, char *filename)
 {
-    FILE *target;
-    target = fopen(filename, "r");
-    if (target == NULL)
+    int src, count, k = 0, linenumber = 0;
+    char buffer[255];
+    char exp;
+    src = open(filename, O_RDONLY);
+
+    if (src == -1)
     {
-        printf("\nSpecified file could not be opened.");
-        fclose(target);
+        printf("\nSource File Not Found!");
+        close(src);
         return;
     }
 
-    char *buffer;
-    int linenumber = 0;
-    size_t buf_size;
-
-    while (getline(&buffer, &buf_size, target) != -1)
+    while ((count = read(src, &exp, sizeof(exp))) != 0)
     {
-        ++linenumber;
-        if (strstr(buffer, pattern) != NULL)
-            printf("%d : %s", linenumber, buffer);
+        buffer[k++] = exp;
+        if (exp == '\n' || exp == '\0' || exp == EOF)
+        {
+            ++linenumber;
+            buffer[k - 1] = '\0';
+            if (strstr(buffer, pattern) != NULL)
+                printf("%d : %s\n", linenumber, buffer);
+            memset(&buffer, 0, 255);
+            k = 0;
+        }
     }
-
-    fclose(target);
     return;
 }
 
 void invertgrep(char *pattern, char *filename)
 {
-    FILE *target;
-    target = fopen(filename, "r");
-    if (target == NULL)
+    int src, count, k = 0;
+    char buffer[255];
+    char exp;
+    src = open(filename, O_RDONLY);
+
+    if (src == -1)
     {
-        printf("\nSpecified file could not be opened.");
-        fclose(target);
+        printf("\nSource File Not Found!");
+        close(src);
         return;
     }
 
-    char buffer[255];
-
-    while (fgets(buffer, 255, target))
+    while ((count = read(src, &exp, sizeof(exp))) != 0)
     {
-        if (strstr(buffer, pattern) == NULL)
-            printf("%s", buffer);
+        buffer[k++] = exp;
+        if (exp == '\n' || exp == '\0' || exp == EOF)
+        {
+            buffer[k - 1] = '\0';
+            if (strstr(buffer, pattern) == NULL)
+                printf("%s\n", buffer);
+            memset(&buffer, 0, 255);
+            k = 0;
+        }
     }
-
-    fclose(target);
     return;
 }
 
 void normalgrep(char *pattern, char *filename)
 {
-    FILE *target;
-    target = fopen(filename, "r");
-    if (target == NULL)
+    int src, count, k = 0;
+    char buffer[255];
+    char exp;
+    src = open(filename, O_RDONLY);
+
+    if (src == -1)
     {
-        printf("\nSpecified file could not be opened.");
-        fclose(target);
+        printf("\nSource File Not Found!");
+        close(src);
         return;
     }
 
-    char buffer[255];
-
-    while (fgets(buffer, 255, target))
+    while ((count = read(src, &exp, sizeof(exp))) != 0)
     {
-        if (strstr(buffer, pattern) != NULL)
-            printf("%s", buffer);
+        buffer[k++] = exp;
+        if (exp == '\n' || exp == '\0' || exp == EOF)
+        {
+            buffer[k - 1] = '\0';
+            if (strstr(buffer, pattern) != NULL)
+                printf("%s\n", buffer);
+            memset(&buffer, 0, 255);
+            k = 0;
+        }
     }
-
-    fclose(target);
     return;
 }
 
