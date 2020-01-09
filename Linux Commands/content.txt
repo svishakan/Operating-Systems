@@ -1,0 +1,6 @@
+Hello
+This text file was written to check the working of the GREP command 
+Grep Grep Grep
+Invert!
+System calls
+calls calls Now callsaregreat.
