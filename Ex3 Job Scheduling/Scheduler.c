@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -8,12 +9,12 @@ typedef struct{
 	int bursttime;		//burst				time
 	int resptime;		//resp				time 
 	int waittime;		//wait				time
-	int turntime;		//turnaround		time
-	int comptime;		//completion		time
+	int turntime;		//turnaround			time
+	int comptime;		//completion			time
 	int nextidle;		//idle time after completion
 	int bufftime;		//buffering 		time for SJFP
 	int temptime;		//current comp.		time for SJFP
-	int status;			//completed 		or not
+	int status;		//completed 		or not
 }pInfo;
 
 
@@ -23,7 +24,7 @@ void	processPrinter(pInfo *process, int numprocess);
 pInfo	*schedulerFCFS(pInfo *process, int numprocess);
 pInfo	*schedulerSJFP(pInfo *process, int numprocess);
 pInfo	*schedulerSJFNP(pInfo *process, int numprocess);
-int		statusCheck(pInfo *process, int numprocess);
+int	statusCheck(pInfo *process, int numprocess);
 void	chartPrinter(pInfo *process, int numprocess);
 void	chartGantt(pInfo *process, int numprocess);	
 
@@ -268,6 +269,7 @@ pInfo *schedulerSJFNP(pInfo *process, int numprocess){
 	int i = 0, currentwait = process[0].arrtime, idletime = 0, j = 0, nextproc = 0, iter = 1;
 	pInfo temp;
 
+
 	while(i<numprocess){
 		//++iter;	//keeping no. of iterations in check
 		process[i].waittime = currentwait - process[i].arrtime + idletime;
@@ -380,8 +382,8 @@ pInfo *schedulerSJFP(pInfo *process, int numprocess){
 
 		if(nextjob == -1){		//if there's no job to pre-empt
 			if(process[job].bufftime == 0){		//if the process is hasn't been pre-empted before
-				process[job].resptime = currentwait - process[job].arrtime + idletime;
-				process[job].comptime = currentwait + process[job].bursttime + idletime;
+				process[job].resptime = currentwait - process[job].arrtime;	//- idletime
+				process[job].comptime = currentwait + process[job].bursttime;	//- idletime
 				
 			}
 			else{
@@ -390,7 +392,7 @@ pInfo *schedulerSJFP(pInfo *process, int numprocess){
 
 			}
 
-			process[job].waittime += (currentwait - process[job].arrtime + idletime - 2*process[job].waittime);
+			process[job].waittime += (currentwait - process[job].arrtime - 2*process[job].waittime);	// - idletime
 			process[job].status = 1;
 			process[job].turntime = process[job].comptime - process[job].arrtime;
 			process[job].temptime = process[job].bursttime;
@@ -404,26 +406,30 @@ pInfo *schedulerSJFP(pInfo *process, int numprocess){
 			int stoptime = process[nextjob].arrtime;
 
 			if(process[job].bufftime == 0){
-				process[job].resptime = currentwait - process[job].arrtime + idletime;
+				process[job].resptime = currentwait - process[job].arrtime;	//- idletime
 				process[job].comptime = stoptime - currentwait;
 			}
 
 			temp = process[job];
 			process[job].bufftime = process[job].bursttime - stoptime;
 
-			process[job].waittime = currentwait - process[job].arrtime + idletime;
+			process[job].waittime = currentwait - process[job].arrtime;	// - idletime
 			process[job].turntime = process[job].comptime - process[job].arrtime;
 			
 			process[job].temptime = process[nextjob].arrtime - currentwait;
 			temp.comptime = process[job].temptime + currentwait;
 			currentwait += process[job].temptime;
 		}
+		
+		//printf("\n%d : %d",currentwait, process[nextjob].arrtime);
 
-		if(process[nextjob].arrtime > currentwait)	//finding idletime if any
-			idletime = process[nextjob].arrtime - currentwait;
+		if(process[nextjob].arrtime > temp.comptime)	//finding idletime if any
+			idletime = process[nextjob].arrtime - temp.comptime;
 				//indicates the amt of idletime after process[i]
 		else
 			idletime = 0;
+			
+		//printf("\n%d, %d",job, idletime);
 
 		process[job].nextidle = idletime;
 		temp.nextidle = idletime;
@@ -439,45 +445,29 @@ pInfo *schedulerSJFP(pInfo *process, int numprocess){
 
 /*
 OUTPUT:
-
 (base) vishakan@Legion:~/Desktop/Operating-Systems/Ex3 FCFS & SJF$ gcc Scheduler.c -o j
 (base) vishakan@Legion:~/Desktop/Operating-Systems/Ex3 FCFS & SJF$ ./j
-
                 CPU SCHEDULING ALGORITHMS
-
         1. FCFS
         2. SJF
         0. EXIT
         Your Option -> 1
-
         FCFS CPU SCHEDULER
-
 Enter the Number of Processes : 3
-
 Enter the Process ID: P1
-
 Enter the Arrival Time of P1: 0
-
 Enter the CPU Burst Time of P1: 3
-
 Enter the Process ID: P2
-
 Enter the Arrival Time of P2: 1
-
 Enter the CPU Burst Time of P2: 2
-
 Enter the Process ID: P3
-
 Enter the Arrival Time of P3: 5
-
 Enter the CPU Burst Time of P3: 6
-
 Gantt Chart:
 ------------------------
 | P1    | P2    | P3    |
 ------------------------
 0       3       5       11   
-
 ---------------------------------------------------------------------
 | P. ID | A. Time | B. Time | C. Time | T. Time | W. Time | R. Time |
 ---------------------------------------------------------------------
@@ -485,50 +475,33 @@ Gantt Chart:
 | P2    | 1       | 2       | 5       | 4       | 2       | 2       |
 | P3    | 5       | 6       | 11      | 6       | 0       | 0       |
 ---------------------------------------------------------------------
-
 Average Waiting Time    :       0.67
 Average Response Time   :       0.67
 ---------------------------------------------------------------------
-
-
                 CPU SCHEDULING ALGORITHMS
-
         1. FCFS
         2. SJF
         0. EXIT
         Your Option -> 2
-
         SJF CPU SCHEDULER
         1. PREEMPTIVE
         2. NON-PREEMPTIVE
         Your Option -> 1
-
 Enter the Number of Processes : 3
-
 Enter the Process ID: P1
-
 Enter the Arrival Time of P1: 0
-
 Enter the CPU Burst Time of P1: 4
-
 Enter the Process ID: P2
-
 Enter the Arrival Time of P2: 3
-
 Enter the CPU Burst Time of P2: 5
-
 Enter the Process ID: P3
-
 Enter the Arrival Time of P3: 4
-
 Enter the CPU Burst Time of P3: 1
-
 Gantt Chart:
 ------------------------
 | P1    | P3    | P2    |
 ------------------------
 0       4       5       10   
-
 ---------------------------------------------------------------------
 | P. ID | A. Time | B. Time | C. Time | T. Time | W. Time | R. Time |
 ---------------------------------------------------------------------
@@ -536,22 +509,21 @@ Gantt Chart:
 | P2    | 3       | 5       | 10      | 7       | 2       | 2       |
 | P3    | 4       | 1       | 5       | 1       | 0       | 0       |
 ---------------------------------------------------------------------
-
 Average Waiting Time    :       0.67
 Average Response Time   :       0.67
 ---------------------------------------------------------------------
 
-                CPU SCHEDULING ALGORITHMS
+		CPU SCHEDULING ALGORITHMS
 
-        1. FCFS
-        2. SJF
-        0. EXIT
-        Your Option -> 2
+	1. FCFS
+	2. SJF
+	0. EXIT
+	Your Option -> 2
 
-        SJF CPU SCHEDULER
-        1. PREEMPTIVE
-        2. NON-PREEMPTIVE
-        Your Option -> 1
+	SJF CPU SCHEDULER
+	1. PREEMPTIVE
+	2. NON-PREEMPTIVE
+	Your Option -> 1
 
 Enter the Number of Processes : 7
 
@@ -563,7 +535,7 @@ Enter the CPU Burst Time of p1: 3
 
 Enter the Process ID: p2
 
-Enter the Arrival Time of p2: 4
+Enter the Arrival Time of p2: 4   
 
 Enter the CPU Burst Time of p2: 2
 
@@ -597,11 +569,12 @@ Enter the Arrival Time of p7: 16
 
 Enter the CPU Burst Time of p7: 8
 
+
 Gantt Chart:
-------------------------------------------------------------------------
-| IDLE  | p1    | p3    | p2    | p4    | p5    | p4    | p6    | p7    |
-------------------------------------------------------------------------
-0       2       5       6       8       9       11      14      21      29   
+--------------------------------------------------------------------------------
+| IDLE  | p1    | p3    | p2    | p4    | p5    | p4    | IDLE  | p6    | p7    |
+--------------------------------------------------------------------------------
+0    	2    	5    	6    	8    	9    	11   	14   	 15     21   	29   	
 
 ---------------------------------------------------------------------
 | P. ID | A. Time | B. Time | C. Time | T. Time | W. Time | R. Time |
@@ -615,7 +588,11 @@ Gantt Chart:
 | p7    | 16      | 8       | 29      | 13      | 5       | 5       |
 ---------------------------------------------------------------------
 
-Average Waiting Time    :       1.43
-Average Response Time   :       1.14
+Average Waiting Time	:	1.43
+Average Response Time	:	1.14
 ---------------------------------------------------------------------
+
 */
+
+
+
