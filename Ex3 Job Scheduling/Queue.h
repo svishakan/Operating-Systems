@@ -8,8 +8,11 @@ typedef struct{
 	int comptime;		//completion			time
 	int nextidle;		//idle time after completion
 	int remtime;		//remaining 			time
-	int status;		//completed 			or not
-	int queued;		//indicates whether or not process is in queue
+	int temptime;		//current comp.		time for PPP
+	int bufftime;		//buffering 		time for PPP
+	int status;			//completed 			or not
+	int queued;			//indicates whether or not process is in queue
+	int prio;			//process priority
 }pInfo;
 
 
