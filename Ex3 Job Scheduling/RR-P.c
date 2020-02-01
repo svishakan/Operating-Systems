@@ -147,6 +147,7 @@ pInfo 	*processInput(int numprocess, int flag){
 		process[i].status = 0;
 		process[i].comptime = 0;
 		process[i].queued = 0;
+		process[i].bufftime = 0;
 		process[i].remtime = process[i].bursttime;
 
 		++i;
@@ -279,7 +280,8 @@ int statusChecker(pInfo *process, int numprocess){
 	if(flag == -1)		//returning -1 if all processes are complete.
 		return -1;
 
-	i = min + 1;
+	//i = min + 1;
+
 	min = flag;
 
 	while(process[i].status == 0 && i < numprocess){
@@ -292,7 +294,6 @@ int statusChecker(pInfo *process, int numprocess){
 	return min;		//returning the minimum burst time unfinished process
 	
 }
-
 
 
 pInfo	*schedulerRR(pInfo *process, int numprocess, int quantum){
@@ -462,7 +463,7 @@ pInfo	*schedulerPPNP(pInfo *process, int numprocess){
 }
 
 pInfo	*schedulerPPP(pInfo *process, int numprocess){
-	int i = 0, currentwait = process[0].arrtime, idletime = 0;
+		int i = 0, currentwait = process[0].arrtime, idletime = 0;
 	int curtime = 0, nextjob = 0, j = 0, jobsdone = 0, job = 0, prevjob = 0;
 	pInfo *queue, temp;	//queue for Gantt Chart
 	queue = (pInfo *)malloc(sizeof(pInfo)*100);
@@ -470,24 +471,26 @@ pInfo	*schedulerPPP(pInfo *process, int numprocess){
 
 	while(statusChecker(process, numprocess) != -1){		//checking if all jobs are complete
 		job = nextjob;
-		int etime = process[job].bursttime + process[job].arrtime;
+		int etime = process[job].bursttime + currentwait;
 		nextjob = -1;
 
 		//finding jobs that might trigger pre-empt
 		for(j=job+1;(process[j].arrtime < etime) && (j < numprocess) && (j!=job);j = (j+1)%numprocess){	
-			int temp = process[j].arrtime + process[j].bursttime;
+
 			if(process[j].status == 1 || j == job)
 				continue;
-			if(nextjob == -1 && temp <= etime)
+				
+			else if(nextjob == -1 && process[j].prio < process[job].prio)
 				nextjob = j;
 			
-			else if(temp <= process[nextjob].bursttime + process[nextjob].arrtime)
-				if(process[j].prio < process[nextjob].prio)	//Higher Priority First
-					nextjob = j;
-				else
-					continue;
+			//else if(temp <= process[nextjob].bursttime + process[nextjob].arrtime)
+			else if(process[j].prio < process[nextjob].prio)	//Higher Priority First					
+				nextjob = j;
+			else
+				continue;
 		}
 
+		//printf("\nLoop Chosen : %s", process[nextjob].pid);
 
 		if(nextjob == -1){		//if there's no job to pre-empt
 			if(process[job].bufftime == 0){		//if the process is hasn't been pre-empted before
@@ -496,17 +499,23 @@ pInfo	*schedulerPPP(pInfo *process, int numprocess){
 				
 			}
 			else{
-				process[job].comptime = -process[job].comptime;
-				process[job].comptime += (2* process[prevjob].comptime - process[job].arrtime);
-
+				process[job].comptime = currentwait + process[job].bursttime - process[job].comptime;
 			}
 
-			process[job].waittime += (currentwait - process[job].arrtime - 2*process[job].waittime);	// - idletime
+			//process[job].waittime += (currentwait - process[job].arrtime - 2*process[job].waittime);	// - idletime
 			process[job].status = 1;
 			process[job].turntime = process[job].comptime - process[job].arrtime;
+			process[job].waittime = process[job].turntime - process[job].bursttime;
 			process[job].temptime = process[job].bursttime;
-			nextjob = statusChecker(process,numprocess);
-			currentwait += process[job].bursttime;
+
+			for(j = 0;j<numprocess && process[j].arrtime <= etime; j++)	//choosing the appropriate next process
+				continue;												//priority - wise
+			nextjob = statusChecker(process,j);		
+			
+			if(nextjob == -1)	//if there is an idle time scenario, and no process gets chosen
+			nextjob = job + 1;	//choose the FCFS-wise next job
+
+			currentwait += process[job].remtime;	//updating currentwait
 			temp = process[job];
 			
 		}
@@ -521,14 +530,18 @@ pInfo	*schedulerPPP(pInfo *process, int numprocess){
 
 			temp = process[job];
 			process[job].bufftime = process[job].bursttime - stoptime;
+			process[job].remtime =  process[job].remtime - (stoptime - currentwait);
 
-			process[job].waittime = currentwait - process[job].arrtime;	// - idletime
+			//process[job].waittime = currentwait - process[job].arrtime;	// - idletime
 			process[job].turntime = process[job].comptime - process[job].arrtime;
 			
 			process[job].temptime = process[nextjob].arrtime - currentwait;
 			temp.comptime = process[job].temptime + currentwait;
 			currentwait += process[job].temptime;
 		}
+
+		//printf("\nFunct Chosen: %s",process[nextjob].pid);
+		
 		
 		//printf("\n%d : %d",currentwait, process[nextjob].arrtime);
 
@@ -540,15 +553,20 @@ pInfo	*schedulerPPP(pInfo *process, int numprocess){
 			
 		//printf("\n%d, %d",job, idletime);
 
+		currentwait+=idletime;	//accounting waiting time to sync with existing idletimes
 		process[job].nextidle = idletime;
 		temp.nextidle = idletime;
 		queue[i++] = temp;	//queueing for Gantt Chart
 		prevjob = job;
 
+		//printf("\n%s CurWait: %d Wait: %d Turn: %d Comp %d IDLE %d BUFF %d",process[job].pid, currentwait, process[job].waittime, process[job].turntime, process[job].comptime, process[job].nextidle, process[job].remtime);
+
 	}
 
 	chartGantt(queue,i);
 	return process;
+
+
 }
 
 /*
@@ -633,5 +651,201 @@ Gantt Chart:
 Average Waiting Time	:	2.43
 Average Response Time	:	0.71
 ---------------------------------------------------------------------
+
+
+
+                CPU SCHEDULING ALGORITHMS
+
+        1. ROUND ROBIN
+        2. PRIORITY
+        0. EXIT
+        Your Option -> 2
+
+        PRIORITY CPU SCHEDULER
+        1. PREEMPTIVE
+        2. NON-PREEMPTIVE
+        Your Option -> 1
+
+Enter the Number of Processes : 7
+
+Enter the Process ID: P1
+
+Enter the Arrival Time of P1: 2
+
+Enter the CPU Burst Time of P1: 3
+
+Enter the Priority of P1: 4
+
+Enter the Process ID: P2
+
+Enter the Arrival Time of P2: 4
+
+Enter the CPU Burst Time of P2: 2
+
+Enter the Priority of P2: 4
+
+Enter the Process ID: p3
+
+Enter the Arrival Time of p3: 5
+
+Enter the CPU Burst Time of p3: 1
+
+Enter the Priority of p3: 1
+
+Enter the Process ID: P4 
+
+Enter the Arrival Time of P4: 7
+
+Enter the CPU Burst Time of P4: 4
+
+Enter the Priority of P4: 2
+
+Enter the Process ID: P5
+
+Enter the Arrival Time of P5: 9
+
+Enter the CPU Burst Time of P5: 2
+
+Enter the Priority of P5: 7
+
+Enter the Process ID: P6
+
+Enter the Arrival Time of P6: 15
+
+Enter the CPU Burst Time of P6: 6
+
+Enter the Priority of P6: 6
+
+Enter the Process ID: P7
+
+Enter the Arrival Time of P7: 16
+
+Enter the CPU Burst Time of P7: 8
+
+Enter the Priority of P7: 3
+
+Gantt Chart:
+----------------------------------------------------------------------------------------
+| IDLE  | P1    | p3    | P2    | P4    | P2    | P5    | IDLE  | P6    | P7    | P6    |
+----------------------------------------------------------------------------------------
+0       2       5       6       7       11      12      14       15     16      24      29   
+
+---------------------------------------------------------------------
+| P. ID | A. Time | B. Time | C. Time | T. Time | W. Time | R. Time |
+---------------------------------------------------------------------
+| P1    | 2       | 3       | 5       | 3       | 0       | 0       |
+| P2    | 4       | 2       | 12      | 8       | 6       | 2       |
+| p3    | 5       | 1       | 6       | 1       | 0       | 0       |
+| P4    | 7       | 4       | 11      | 4       | 0       | 0       |
+| P5    | 9       | 2       | 14      | 5       | 3       | 3       |
+| P6    | 15      | 6       | 29      | 14      | 8       | 0       |
+| P7    | 16      | 8       | 24      | 8       | 0       | 0       |
+---------------------------------------------------------------------
+
+Average Waiting Time    :       2.43
+Average Response Time   :       0.71
+---------------------------------------------------------------------
+
+
+                CPU SCHEDULING ALGORITHMS
+
+        1. ROUND ROBIN
+        2. PRIORITY
+        0. EXIT
+        Your Option -> 2
+
+        PRIORITY CPU SCHEDULER
+        1. PREEMPTIVE
+        2. NON-PREEMPTIVE
+        Your Option -> 2
+
+Enter the Number of Processes : 7
+
+Enter the Process ID: P1
+
+Enter the Arrival Time of P1: 2
+
+Enter the CPU Burst Time of P1: 3
+
+Enter the Priority of P1: 4
+
+Enter the Process ID: P2
+
+Enter the Arrival Time of P2: 4
+
+Enter the CPU Burst Time of P2: 2
+
+Enter the Priority of P2: 4
+
+Enter the Process ID: P3
+
+Enter the Arrival Time of P3: 5
+
+Enter the CPU Burst Time of P3: 1
+
+Enter the Priority of P3: 1
+
+Enter the Process ID: P4
+
+Enter the Arrival Time of P4: 7
+
+Enter the CPU Burst Time of P4: 4
+
+Enter the Priority of P4: 2
+
+Enter the Process ID: P5
+
+Enter the Arrival Time of P5: 9
+
+Enter the CPU Burst Time of P5: 2
+
+Enter the Priority of P5: 7
+
+Enter the Process ID: P6
+
+Enter the Arrival Time of P6: 15
+
+Enter the CPU Burst Time of P6: 6
+
+Enter the Priority of P6: 6
+
+Enter the Process ID: P7
+
+Enter the Arrival Time of P7: 16
+
+Enter the CPU Burst Time of P7: 8
+
+Enter the Priority of P7: 3
+
+Gantt Chart:
+------------------------------------------------------------------------
+| IDLE  | P1    | P3    | P2    | P4    | P5    | IDLE  | P6    | P7    |
+------------------------------------------------------------------------
+0       2       5       6       8       12      14       15     21      29   
+
+---------------------------------------------------------------------
+| P. ID | A. Time | B. Time | C. Time | T. Time | W. Time | R. Time |
+---------------------------------------------------------------------
+| P1    | 2       | 3       | 5       | 3       | 0       | 0       |
+| P3    | 5       | 1       | 6       | 1       | 0       | 0       |
+| P2    | 4       | 2       | 8       | 4       | 2       | 2       |
+| P4    | 7       | 4       | 12      | 5       | 1       | 1       |
+| P5    | 9       | 2       | 14      | 5       | 3       | 3       |
+| P6    | 15      | 6       | 21      | 6       | 0       | 0       |
+| P7    | 16      | 8       | 29      | 13      | 5       | 5       |
+---------------------------------------------------------------------
+
+Average Waiting Time    :       1.57
+Average Response Time   :       1.57
+---------------------------------------------------------------------
+
+                CPU SCHEDULING ALGORITHMS
+
+        1. ROUND ROBIN
+        2. PRIORITY
+        0. EXIT
+        Your Option -> 0
+
+        Thank You!
 
 */
