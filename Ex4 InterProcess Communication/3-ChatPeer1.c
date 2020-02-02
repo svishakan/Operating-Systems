@@ -31,7 +31,7 @@ int main(void){
     
 
     while(1){
-    	strcpy(msg, "~");
+    	strcpy(msg, "~");                    //Clearing the msg buffer with ~ again for next time
         while(buffer[0] == '~');            //Waiting, if the buffer is empty.
         strcpy(temp2, buffer);
         char *sep = strtok(temp2, "`");     //Splitting the string at the preset value ` for the other client
@@ -46,8 +46,8 @@ int main(void){
             printf("You:\n\t");
             fgets(temp1, 100, stdin);
             strcat(msg, temp1);             //Putting the scanned value into buffer
-            strcpy(buffer, msg);
-            strcat(msg, "~");               //Clearing the msg buffer with ~ again for next time
+            strcpy(buffer, msg);            //Now buffer is like ~<msg>
+            strcat(msg, "~");               //Now msg is like ~<msg>~
 
             if(strcmp(temp1, "Bye\n") == 0){    //Exiting the chat this user enters "Bye"
                 break;
