@@ -41,7 +41,7 @@ int main(void)
         case 0:
             printf("\n\t\tThank You!\n");
             break;
-            
+
         default:
             printf("\n\tInvalid Option.\n");
             break;

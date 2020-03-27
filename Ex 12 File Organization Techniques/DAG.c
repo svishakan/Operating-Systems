@@ -20,18 +20,21 @@ dir *initRoot();
 void insertDirectory(char path[]);
 void insertFile(char path[]);
 void displayContents(dir *root, char path[]);
+file *getFilePointer(char path[]);
+dir *getDirectoryPointer(char path[]);
+void createLink(char path[], char dir_name[]);
 
 int main(void)
 {
     root = initRoot();
     int opt = 1;
-    char dir_name[50], name[50], path[500];
+    char dir_name[50], name[50], path[500], path_name[50];
 
     printf("\n\t\t\tTwo Level Directory Structure\n");
 
     while (opt != 0)
     {
-        printf("\n\t\tMain Menu\n\t1. Create a New File\n\t2. Create a New Directory\n\t3. Display Existing Files\n\t0. Exit the Program\n\tYour choice -> ");
+        printf("\n\t\tMain Menu\n\t1. Create a New File\n\t2. Create a New Directory\n\t3. Create a Link to a File\n\t4. Display Existing Files\n\t0. Exit the Program\n\tYour choice -> ");
         scanf("%d", &opt);
         switch (opt)
         {
@@ -50,6 +53,14 @@ int main(void)
             break;
 
         case 3:
+            printf("\nEnter the Path of File (Including File Name): ");
+            scanf("%s", path_name);
+            printf("\nEnter the Path of Directory to Create Link in: ");
+            scanf("%s", dir_name);
+            createLink(path_name, dir_name);
+            break;
+
+        case 4:
             strcpy(path, "");
             printf("\nFile\t\t\t\tPath\n\n");
             displayContents(root, path);
@@ -229,25 +240,120 @@ void displayContents(dir *root, char path[])
     }
 }
 
+file *getFilePointer(char path[])
+{ //to return the file pointer to the specified file
+    dir *temp = root;
+    char *split = strtok(path, "/");
+    char *t;
+
+    while (split != NULL)
+    { //traversing to the specified sub-directory
+        if (temp->dir1 != NULL && strcmp(split, temp->dir1->name) == 0)
+        {
+            temp = temp->dir1;
+        }
+        else if (temp->dir2 != NULL && strcmp(split, temp->dir2->name) == 0)
+        {
+            temp = temp->dir2;
+        }
+        else if (temp->dir3 != NULL && strcmp(split, temp->dir3->name) == 0)
+        {
+            temp = temp->dir3;
+        }
+        t = split;
+        split = strtok(NULL, "/");
+        if (split == NULL)
+        { //reached the parent directory of the file
+            if (strcmp(temp->file1->name, t) == 0)
+            {
+                return temp->file1;
+            }
+            else if (strcmp(temp->file2->name, t) == 0)
+            {
+                return temp->file2;
+            }
+            else
+            {
+                printf("\nThe specified file does not exist.\n");
+                return NULL;
+            }
+        }
+    }
+    return NULL;
+}
+
+dir *getDirectoryPointer(char path[])
+{ //to return the directory pointer to the specified directory
+    char *split = strtok(path, "/");
+    dir *temp = root;
+
+    while (split != NULL)
+    { //traversing to the specified sub-directory
+        if (temp->dir1 != NULL && strcmp(split, temp->dir1->name) == 0)
+        {
+            temp = temp->dir1;
+        }
+        else if (temp->dir2 != NULL && strcmp(split, temp->dir2->name) == 0)
+        {
+            temp = temp->dir2;
+        }
+        else if (temp->dir3 != NULL && strcmp(split, temp->dir3->name) == 0)
+        {
+            temp = temp->dir3;
+        }
+
+        split = strtok(NULL, "/");
+
+        if (split == NULL)
+        { //reached the required directory
+            return temp;
+        }
+    }
+    return NULL;
+}
+
+void createLink(char path[], char dir_name[])
+{ //creating a link to existing file to another directory
+    file *temp_file = getFilePointer(path);
+    dir *temp_dir = getDirectoryPointer(dir_name);
+
+    if (temp_file != NULL)
+    {
+        if (temp_dir->file1 == NULL)
+        {
+            temp_dir->file1 = temp_file;
+        }
+        else if (temp_dir->file2 == NULL)
+        {
+            temp_dir->file2 = temp_file;
+        }
+        else
+        {
+            printf("\nThe destination directory is full. Link cannot be created.\n");
+        }
+    }
+}
+
 /*
 OUTPUT:
-(base) vishakan@Legion:~/Desktop/Operating-Systems/Ex 12 File Organization Techniques$ gcc TreeHierarchy.c -o t
-(base) vishakan@Legion:~/Desktop/Operating-Systems/Ex 12 File Organization Techniques$ ./t
+(base) vishakan@Legion:~/Desktop/Operating-Systems/Ex 12 File Organization Techniques$ gcc DAGraph.c -o d(base) vishakan@Legion:~/Desktop/Operating-Systems/Ex 12 File Organization Techniques$ ./d
                         Two Level Directory Structure
                 Main Menu
         1. Create a New File
         2. Create a New Directory
-        3. Display Existing Files
+        3. Create a Link to a File
+        4. Display Existing Files
         0. Exit the Program
         Your choice -> 1
 Enter "root" to create a file in the root directory.
 Enter "root/directory" to create a file in the sub-directory.
-Enter the Path: root       
-Enter the File Name: N_Queens.py
+Enter the Path: root
+Enter the File Name: DAG.c
                 Main Menu
         1. Create a New File
         2. Create a New Directory
-        3. Display Existing Files
+        3. Create a Link to a File
+        4. Display Existing Files
         0. Exit the Program
         Your choice -> 2
 Enter "root" to create a file in the root directory.
@@ -257,47 +363,27 @@ Enter the Directory Name: OS
                 Main Menu
         1. Create a New File
         2. Create a New Directory
-        3. Display Existing Files
-        0. Exit the Program
-        Your choice -> 2
-Enter "root" to create a file in the root directory.
-Enter "root/directory" to create a file in the sub-directory.
-Enter the Path: root/OS
-Enter the Directory Name: Paging
-                Main Menu
-        1. Create a New File
-        2. Create a New Directory
-        3. Display Existing Files
-        0. Exit the Program
-        Your choice -> 1
-Enter "root" to create a file in the root directory.
-Enter "root/directory" to create a file in the sub-directory.
-Enter the Path: root/OS/Paging
-Enter the File Name: Paging.c
-                Main Menu
-        1. Create a New File
-        2. Create a New Directory
-        3. Display Existing Files
-        0. Exit the Program
-        Your choice -> 1
-Enter "root" to create a file in the root directory.
-Enter "root/directory" to create a file in the sub-directory.
-Enter the Path: root/OS
-Enter the File Name: Queue.h
-                Main Menu
-        1. Create a New File
-        2. Create a New Directory
-        3. Display Existing Files
+        3. Create a Link to a File
+        4. Display Existing Files
         0. Exit the Program
         Your choice -> 3
-File            Path
-N_Queens.py     root/
-Queue.h         root/OS/
-Paging.c        root/OS/Paging/
+Enter the Path of File (Including File Name): root/DAG.c
+Enter the Path of Directory to Create Link in: root/OS
                 Main Menu
         1. Create a New File
         2. Create a New Directory
-        3. Display Existing Files
+        3. Create a Link to a File
+        4. Display Existing Files
+        0. Exit the Program
+        Your choice -> 4
+File                            Path
+DAG.c                   root/
+DAG.c                   root/OS/
+                Main Menu
+        1. Create a New File
+        2. Create a New Directory
+        3. Create a Link to a File
+        4. Display Existing Files
         0. Exit the Program
         Your choice -> 0
                 Thank You!
