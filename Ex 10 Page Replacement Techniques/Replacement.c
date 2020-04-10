@@ -24,10 +24,12 @@ void    toArray(node *head, int arr[]);
 int     min(int arr[], int len);
 int     max(int arr[], int len);
 int     linearSearch(int arr[], int start, int len, int elt);
+int     occurenceCounter(int arr[], int start, int len, int elt);
 void    printArray(int arr[], int len);
 int     FIFO(int ref_str[], int len, int fsize);
 int     LRU(int ref_str[], int len, int fsize);
 int     OPT(int ref_str[], int len, int fsize);
+int     LFU(int ref_str[], int len, int fsize);
 
 int main(void)
 {
@@ -37,7 +39,7 @@ int main(void)
 
     while (opt != 0)
     {
-        printf("\n\n\t\t\tMain Menu\n\n\t1. Enter the Reference String\n\t2. View the Reference String\n\t3. Implement FIFO Algorithm\n\t4. Implement LRU Algorithm\n\t5. Implement Optimal Algorithm\n\t0. Exit\n\tYour Choice -> ");
+        printf("\n\n\t\t\tMain Menu\n\n\t1. Enter the Reference String\n\t2. View the Reference String\n\t3. Implement FIFO Algorithm\n\t4. Implement LRU Algorithm\n\t5. Implement Optimal Algorithm\n\t6. Implement LFU Algorithm\n\t0. Exit\n\tYour Choice -> ");
         scanf("%d", &opt);
 
         switch (opt)
@@ -74,6 +76,11 @@ int main(void)
         case 5:
             pagefaults = OPT(ref_str, len, fsize);
             printf("\nNo. of Page Faults on performing Optimal Algorithm: %d", pagefaults);
+            break;
+
+        case 6:
+            pagefaults = LFU(ref_str, len, fsize);
+            printf("\nNo. of Page Faults on performing LFU Algorithm: %d", pagefaults);
             break;
 
         case 0:
@@ -273,6 +280,7 @@ int max(int arr[], int len)
 int linearSearch(int arr[], int start, int len, int elt)
 { //searching for a specific element in an array
     int index = 9999, i = 0;
+
     for (i = start; i < len; i++)
     {
         if (arr[i] == elt)
@@ -282,6 +290,21 @@ int linearSearch(int arr[], int start, int len, int elt)
     }
 
     return index;
+}
+
+int occurenceCounter(int arr[], int start, int len, int elt)
+{ //finding number of occurrences of a frame in a reference string
+    int count = 0, i = 0;
+
+    for (i = start; i < len; i++)
+    {
+        if (arr[i] == elt)
+        {
+            count++;
+        }
+    }
+
+    return count;
 }
 
 int FIFO(int ref_str[], int len, int fsize)
@@ -417,11 +440,63 @@ int OPT(int ref_str[], int len, int fsize)
     return pagefaults;
 }
 
+int LFU(int ref_str[], int len, int fsize)
+{ //performing the LFU algorithm
+    node *head = NULL;
+    int current_list[MAXSIZE];
+    int frame_counts[fsize];
+    int i = 0, j = 0, listsize = 0, found = 0, pagefaults = 0, min_used;
+
+    printf("\nImplementing Least Frequently Used Algorithm: \n");
+
+    for (i = 0; i < len; i++)
+    {
+        listsize = getSize(head);
+        if (listsize < fsize)
+        { //initial loading of frame queue
+            found = search(head, ref_str[i]);
+            if (found == 0)
+            {
+                pagefaults++;
+                head = enqueue(head, ref_str[i]);
+            }
+            printList(head);
+        }
+        else
+        { //page replacement strategy : LRU
+            found = search(head, ref_str[i]);
+            if (found == 0)
+            {
+                pagefaults++;
+                toArray(head, current_list);
+                for (j = 0; j < fsize; j++)
+                { //finding the least frequently used page
+                    frame_counts[j] = occurenceCounter(ref_str, 0, i, current_list[j]);
+                }
+                min_used = min(frame_counts, fsize);
+                if (min_used == fsize - 1)
+                { //tie breaker : FIFO
+                    head = dequeue(head);
+                    head = enqueue(head, ref_str[i]);
+                }
+                else
+                { //replace the least recently used page
+                    head = delete (head, current_list[min_used]);
+                    head = enqueue(head, ref_str[i]);
+                }
+            }
+            printList(head);
+        }
+    }
+
+    return pagefaults;
+}
+
 /*
 OUTPUT:
 
-vishakan@Legion:~/Desktop/Operating-Systems/Ex10 Page Replacement Techniques$ gcc Replacement.c -o r
-vishakan@Legion:~/Desktop/Operating-Systems/Ex10 Page Replacement Techniques$ ./r
+(base) vishakan@Legion:~/Desktop/Operating-Systems/Ex 10 Page Replacement Techniques$ gcc Replacement.c -o r
+(base) vishakan@Legion:~/Desktop/Operating-Systems/Ex 10 Page Replacement Techniques$ ./r
 
 
                         Main Menu
@@ -431,10 +506,11 @@ vishakan@Legion:~/Desktop/Operating-Systems/Ex10 Page Replacement Techniques$ ./
         3. Implement FIFO Algorithm
         4. Implement LRU Algorithm
         5. Implement Optimal Algorithm
+        6. Implement LFU Algorithm
         0. Exit
         Your Choice -> 1
 
-Enter the length of the reference string(Maximum : 20): 20
+Enter the length of the reference string(Maximum : 20): 20                     
 
 Enter the reference string: 7 0 1 2 0 3 0 4 2 3 0 3 2 1 2 0 1 7 0 1
 
@@ -448,25 +524,7 @@ Enter the frame size: 3
         3. Implement FIFO Algorithm
         4. Implement LRU Algorithm
         5. Implement Optimal Algorithm
-        0. Exit
-        Your Choice -> 2
-
-        Reference String:
-
-7 0 1 2 0 3 0 4 2 3 0 3 2 1 2 0 1 7 0 1 
-
-
-        Length of Reference String: 20
-
-        Frame Size: 3
-
-                        Main Menu
-
-        1. Enter the Reference String
-        2. View the Reference String
-        3. Implement FIFO Algorithm
-        4. Implement LRU Algorithm
-        5. Implement Optimal Algorithm
+        6. Implement LFU Algorithm
         0. Exit
         Your Choice -> 3
 
@@ -521,6 +579,7 @@ No. of Page Faults on performing FIFO Algorithm: 15
         3. Implement FIFO Algorithm
         4. Implement LRU Algorithm
         5. Implement Optimal Algorithm
+        6. Implement LFU Algorithm
         0. Exit
         Your Choice -> 4
 
@@ -575,6 +634,7 @@ No. of Page Faults on performing LRU Algorithm: 12
         3. Implement FIFO Algorithm
         4. Implement LRU Algorithm
         5. Implement Optimal Algorithm
+        6. Implement LFU Algorithm
         0. Exit
         Your Choice -> 5
 
@@ -629,8 +689,64 @@ No. of Page Faults on performing Optimal Algorithm: 10
         3. Implement FIFO Algorithm
         4. Implement LRU Algorithm
         5. Implement Optimal Algorithm
+        6. Implement LFU Algorithm
+        0. Exit
+        Your Choice -> 6
+
+Implementing Least Frequently Used Algorithm: 
+
+7 
+
+0 7 
+
+1 0 7 
+
+2 1 0 
+
+2 1 0 
+
+3 2 0 
+
+3 2 0 
+
+4 3 0 
+
+2 4 0 
+
+3 2 0 
+
+3 2 0 
+
+3 2 0 
+
+3 2 0 
+
+1 3 0 
+
+2 3 0 
+
+2 3 0 
+
+1 2 0 
+
+7 2 0 
+
+7 2 0 
+
+1 2 0 
+
+No. of Page Faults on performing LFU Algorithm: 13
+
+                        Main Menu
+
+        1. Enter the Reference String
+        2. View the Reference String
+        3. Implement FIFO Algorithm
+        4. Implement LRU Algorithm
+        5. Implement Optimal Algorithm
+        6. Implement LFU Algorithm
         0. Exit
         Your Choice -> 0
 
-            Thank You!
+                Thank You!
 */
